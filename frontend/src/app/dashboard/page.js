@@ -57,9 +57,34 @@ export default function DashboardPage() {
         return <div className="loading"><div className="spinner"></div></div>;
     }
 
-    const circumference = 2 * Math.PI * 40;
-    const offset = data ? circumference - (data.completionPercent / 100) * circumference : circumference;
-    const maxCategoryCount = data ? Math.max(...data.byCategory.map(c => c.count), 1) : 1;
+    const circumference = 2 * Math.PI * 20; // Radius 20 for solid pie (strokeWeight 40)
+    const maxCategoryCount = data && data.byCategory ? Math.max(...data.byCategory.map(c => c.count), 1) : 1;
+
+    const segments = data ? [
+        { count: data.overdue, color: 'var(--danger)', label: 'Overdue' },
+        { count: data.pending, color: 'var(--warning)', label: 'Backlog' },
+        { count: data.inProgress, color: 'var(--info)', label: 'In Progress' },
+        { count: data.completed, color: 'var(--success)', label: 'Completed' }
+    ] : [];
+
+    const totalCount = segments.reduce((sum, s) => sum + s.count, 0);
+
+    const calculateSegment = (count) => {
+        if (!totalCount || !count) return { array: `0 ${circumference}`, offset: 0 };
+        const percentage = count / totalCount;
+        return {
+            array: `${percentage * circumference} ${circumference}`,
+            offset: 0
+        };
+    };
+
+    let currentOffset = 0;
+    const renderedSegments = segments.map(s => {
+        const seg = calculateSegment(s.count);
+        const result = { ...s, array: seg.array, offset: -currentOffset };
+        currentOffset += (s.count / totalCount) * circumference;
+        return result;
+    });
 
     // Calendar logic
     const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -122,9 +147,7 @@ export default function DashboardPage() {
             <main className="main-content">
                 <div className="page-header">
                     <h1>Dashboard</h1>
-                    <p>
-                        {user.role === 'ADMIN' ? 'Overview of all tasks across all users' : 'Your task overview'}
-                    </p>
+                    <p>Your task overview</p>
                 </div>
 
                 {loading ? (
@@ -136,12 +159,12 @@ export default function DashboardPage() {
                             <div className="stat-card">
                                 <div className="stat-icon" style={{ background: 'var(--accent-glow)', color: 'var(--accent)' }}><ListTodo size={20} /></div>
                                 <div className="stat-value">{data.total}</div>
-                                <div className="stat-label">Total Tasks</div>
+                                <div className="stat-label">Workspace Tasks</div>
                             </div>
                             <div className="stat-card">
                                 <div className="stat-icon" style={{ background: 'var(--warning-bg)', color: 'var(--warning)' }}><Clock size={20} /></div>
                                 <div className="stat-value">{data.pending}</div>
-                                <div className="stat-label">Pending</div>
+                                <div className="stat-label">Backlog</div>
                             </div>
                             <div className="stat-card">
                                 <div className="stat-icon" style={{ background: 'var(--info-bg)', color: 'var(--info)' }}><RefreshCw size={20} /></div>
@@ -164,67 +187,69 @@ export default function DashboardPage() {
                         <div className="charts-grid">
                             {/* Completion Ring */}
                             <div className="chart-card">
-                                <h3>Completion Rate</h3>
+                                <h3>Project Execution</h3>
                                 <div className="progress-ring">
                                     <div className="progress-ring-visual">
-                                        <svg width="100" height="100">
-                                            <circle className="ring-bg" cx="50" cy="50" r="40" fill="none" strokeWidth="8" />
-                                            <circle
-                                                className="ring-fill"
-                                                cx="50" cy="50" r="40"
-                                                fill="none"
-                                                strokeWidth="8"
-                                                strokeDasharray={circumference}
-                                                strokeDashoffset={offset}
-                                            />
+                                        <svg width="100" height="100" style={{ transform: 'rotate(-90deg)' }}>
+                                            <circle className="ring-bg" cx="50" cy="50" r="20" fill="none" strokeWidth="40" stroke="rgba(255,255,255,0.05)" />
+                                            {renderedSegments.map((seg, i) => (
+                                                <circle
+                                                    key={i}
+                                                    cx="50" cy="50" r="20"
+                                                    fill="none"
+                                                    strokeWidth="40"
+                                                    stroke={seg.color}
+                                                    strokeDasharray={seg.array}
+                                                    strokeDashoffset={seg.offset}
+                                                    style={{ transition: 'stroke-dashoffset 0.5s ease' }}
+                                                />
+                                            ))}
                                         </svg>
-                                        <div className="progress-ring-text">
-                                            <div className="percent">{data.completionPercent}%</div>
-                                            <div className="label">Complete</div>
-                                        </div>
                                     </div>
                                     <div className="ring-legend">
-                                        <div className="legend-item">
-                                            <span className="legend-dot" style={{ background: 'var(--warning)' }}></span>
-                                            Pending ({data.pending})
-                                        </div>
-                                        <div className="legend-item">
-                                            <span className="legend-dot" style={{ background: 'var(--info)' }}></span>
-                                            In Progress ({data.inProgress})
-                                        </div>
-                                        <div className="legend-item">
-                                            <span className="legend-dot" style={{ background: 'var(--success)' }}></span>
-                                            Completed ({data.completed})
-                                        </div>
+                                        {segments.map((s, i) => {
+                                            const pct = totalCount > 0 ? Math.round((s.count / totalCount) * 100) : 0;
+                                            return (
+                                                <div className="legend-item" key={i}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                        <span className="legend-dot" style={{ background: s.color }}></span>
+                                                        <span style={{ fontWeight: '500' }}>{s.label} ({s.count})</span>
+                                                    </div>
+                                                    <span style={{ color: 'var(--text-secondary)', fontSize: '0.8rem' }}>{pct}%</span>
+                                                </div>
+                                            );
+                                        })}
                                     </div>
                                 </div>
                             </div>
 
                             {/* Upcoming Deadlines */}
-                            <div className="upcoming-list">
-                                <h3>Upcoming Deadlines</h3>
+                            <div className="upcoming-list chart-card">
+                                <h3 style={{ marginBottom: '1rem' }}>Upcoming Deadlines</h3>
                                 {data.upcoming.length === 0 ? (
                                     <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', padding: '0.5rem 0' }}>
                                         No upcoming deadlines
                                     </p>
                                 ) : (
-                                    data.upcoming.map((task) => (
-                                        <div className="upcoming-item" key={task.id}>
-                                            <div>
-                                                <div className="upcoming-title">{task.title}</div>
-                                                {task.category && (
-                                                    <span className="badge badge-category" style={{ borderColor: task.category.color, color: task.category.color }}>
-                                                        {task.category.name}
-                                                    </span>
-                                                )}
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                                        {data.upcoming.map((task) => (
+                                            <div className="upcoming-item" key={task.id} style={{ cursor: 'pointer' }} onClick={() => setDetailTaskId(task.id)}>
+                                                <div>
+                                                    <div className="upcoming-title">{task.title}</div>
+                                                    {task.category && (
+                                                        <span className="badge badge-category" style={{ borderColor: task.category.color, color: task.category.color }}>
+                                                            {task.category.name}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <span className="upcoming-date">
+                                                    {new Date(task.dueDate).toLocaleDateString('en-US', {
+                                                        weekday: 'short', month: 'short', day: 'numeric'
+                                                    })}
+                                                </span>
                                             </div>
-                                            <span className="upcoming-date">
-                                                {new Date(task.dueDate).toLocaleDateString('en-US', {
-                                                    weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
-                                                })}
-                                            </span>
-                                        </div>
-                                    ))
+                                        ))}
+                                    </div>
                                 )}
                             </div>
                         </div>

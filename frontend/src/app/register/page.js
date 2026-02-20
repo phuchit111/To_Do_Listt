@@ -2,12 +2,15 @@
 
 import { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { useTheme } from '../../context/ThemeContext';
 import { authAPI } from '../../lib/api';
 import Link from 'next/link';
+import { Sun, Moon } from 'lucide-react';
 
 export default function RegisterPage() {
     const { login } = useAuth();
-    const [form, setForm] = useState({ name: '', email: '', password: '', role: 'USER' });
+    const { theme, toggleTheme } = useTheme();
+    const [form, setForm] = useState({ name: '', email: '', password: '' });
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
 
@@ -29,6 +32,13 @@ export default function RegisterPage() {
 
     return (
         <div className="auth-container">
+            <button
+                className="floating-theme-toggle"
+                onClick={toggleTheme}
+                title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+            >
+                {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
+            </button>
             <div className="auth-card">
                 <h1>Create Account</h1>
                 <p className="subtitle">Join TaskFlow and start organizing</p>
@@ -70,17 +80,7 @@ export default function RegisterPage() {
                             required
                         />
                     </div>
-                    <div className="form-group">
-                        <label>Role</label>
-                        <select
-                            id="register-role"
-                            value={form.role}
-                            onChange={(e) => update('role', e.target.value)}
-                        >
-                            <option value="USER">User</option>
-                            <option value="ADMIN">Admin</option>
-                        </select>
-                    </div>
+
                     <button id="register-submit" className="btn btn-primary" type="submit" disabled={loading}>
                         {loading ? 'Creating...' : 'Create Account'}
                     </button>

@@ -8,35 +8,58 @@ const prisma = new PrismaClient();
 // GET /api/dashboard — stats & analytics
 router.get('/', authMiddleware, async (req, res) => {
     try {
-        // ADMIN sees all, USER sees own + tagged tasks
-        const where = req.user.role === 'ADMIN'
-            ? {}
-            : {
-                OR: [
-                    { userId: req.user.id },
-                    { tags: { some: { userId: req.user.id } } },
-                ],
-            };
+        // All users see only their own + tagged tasks
+        const where = {
+            OR: [
+                { userId: req.user.id },
+                { tags: { some: { userId: req.user.id } } },
+            ],
+        };
 
-        // Total tasks
-        const total = await prisma.task.count({ where });
+        const now = new Date();
 
-        // By status
-        const pending = await prisma.task.count({ where: { ...where, status: 'PENDING' } });
-        const inProgress = await prisma.task.count({ where: { ...where, status: 'IN_PROGRESS' } });
-        const completed = await prisma.task.count({ where: { ...where, status: 'COMPLETED' } });
+        // 1. Completed
+        const completed = await prisma.task.count({
+            where: { ...where, status: 'COMPLETED' }
+        });
 
-        // Completion percentage
-        const completionPercent = total > 0 ? Math.round((completed / total) * 100) : 0;
-
-        // Overdue tasks
+        // 2. Overdue (Not completed and due date has passed)
         const overdue = await prisma.task.count({
             where: {
                 ...where,
                 status: { not: 'COMPLETED' },
-                dueDate: { lt: new Date() },
+                dueDate: { lt: now },
             },
         });
+
+        // 3. In Progress (Active work, not overdue)
+        const inProgress = await prisma.task.count({
+            where: {
+                ...where,
+                status: 'IN_PROGRESS',
+                OR: [
+                    { dueDate: { gte: now } },
+                    { dueDate: null },
+                ],
+            },
+        });
+
+        // 4. Backlog (Everything else: Not completed, not in-progress, and not overdue)
+        const pending = await prisma.task.count({
+            where: {
+                ...where,
+                status: { notIn: ['COMPLETED', 'IN_PROGRESS'] },
+                OR: [
+                    { dueDate: { gte: now } },
+                    { dueDate: null },
+                ],
+            },
+        });
+
+        // Metrics for the UI
+        const totalWork = completed + overdue + inProgress + pending;
+        const totalActive = inProgress + completed + overdue; // Anything started or due
+        const executionProgress = totalActive > 0 ? Math.round((completed / totalActive) * 100) : 0;
 
         // Tasks per category
         const categoriesRaw = await prisma.task.groupBy({
@@ -67,7 +90,7 @@ router.get('/', authMiddleware, async (req, res) => {
             where: {
                 ...where,
                 status: { not: 'COMPLETED' },
-                dueDate: { gte: new Date(), lte: nextWeek },
+                dueDate: { gte: now, lte: nextWeek },
             },
             include: {
                 category: true,
@@ -77,14 +100,14 @@ router.get('/', authMiddleware, async (req, res) => {
         });
 
         res.json({
-            total,
+            total: totalWork,
             pending,
             inProgress,
             completed,
-            completionPercent,
             overdue,
-            byCategory,
+            executionProgress,
             upcoming,
+            byCategory,
         });
     } catch (err) {
         console.error(err);

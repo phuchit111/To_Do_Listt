@@ -3,16 +3,19 @@
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import { useState, useEffect } from 'react';
 import NotificationDropdown from './NotificationDropdown';
 import { projectAPI } from '../lib/api';
 import {
     LayoutDashboard, ListTodo, Columns, Calendar,
-    Settings, LogOut, Plus, Trash2, X, Menu
+    Settings, LogOut, Plus, Trash2, X, Menu,
+    Sun, Moon
 } from 'lucide-react';
 
 export default function Sidebar() {
     const { user, logout } = useAuth();
+    const { theme, toggleTheme } = useTheme();
     const pathname = usePathname();
     const searchParams = useSearchParams();
     const [open, setOpen] = useState(false);
@@ -191,6 +194,14 @@ export default function Sidebar() {
                 </div>
 
                 <div className="sidebar-footer">
+                    <button
+                        className="theme-toggle"
+                        onClick={toggleTheme}
+                        title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+                    >
+                        {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+                        <span>{theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</span>
+                    </button>
                     <button onClick={logout} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', justifyContent: 'center', width: '100%' }}>
                         <LogOut size={16} /> Sign Out
                     </button>

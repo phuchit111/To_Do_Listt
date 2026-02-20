@@ -2,11 +2,14 @@
 
 import { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { useTheme } from '../../context/ThemeContext';
 import { authAPI } from '../../lib/api';
 import Link from 'next/link';
+import { Sun, Moon } from 'lucide-react';
 
 export default function LoginPage() {
     const { login } = useAuth();
+    const { theme, toggleTheme } = useTheme();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
@@ -28,6 +31,13 @@ export default function LoginPage() {
 
     return (
         <div className="auth-container">
+            <button
+                className="floating-theme-toggle"
+                onClick={toggleTheme}
+                title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+            >
+                {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
+            </button>
             <div className="auth-card">
                 <h1>Welcome Back</h1>
                 <p className="subtitle">Sign in to your TaskFlow account</p>

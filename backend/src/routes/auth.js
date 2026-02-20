@@ -9,24 +9,13 @@ const prisma = new PrismaClient();
 // POST /api/auth/register
 router.post('/register', async (req, res) => {
     try {
-        const { name, email, password, role } = req.body;
-
-        if (!name || !email || !password) {
-            return res.status(400).json({ error: 'Name, email, and password are required.' });
-        }
-
-        const existing = await prisma.user.findUnique({ where: { email } });
-        if (existing) {
-            return res.status(409).json({ error: 'Email already registered.' });
-        }
-
         const hashed = await bcrypt.hash(password, 10);
         const user = await prisma.user.create({
             data: {
                 name,
                 email,
                 password: hashed,
-                role: role === 'ADMIN' ? 'ADMIN' : 'USER',
+                role: 'USER',
             },
             select: { id: true, name: true, email: true, role: true, createdAt: true },
         });
