@@ -41,7 +41,7 @@ export default function RegisterPage() {
             </button>
             <div className="auth-card">
                 <h1>Create Account</h1>
-                <p className="subtitle">Join TaskFlow and start organizing</p>
+                <p className="subtitle">Join UpClick and start organizing</p>
 
                 {error && <div className="error-msg">{error}</div>}
 

@@ -72,7 +72,7 @@ export default function Sidebar() {
             <aside className={`sidebar ${open ? 'open' : ''}`}>
                 <div className="sidebar-header">
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <h2>TaskFlow</h2>
+                        <h2>UpClick</h2>
                         <NotificationDropdown />
                     </div>
                     <div className="user-info">

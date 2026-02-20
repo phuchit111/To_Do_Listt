@@ -1,4 +1,4 @@
-# TaskFlow Project Management System
+# UpClick Project Management System
 
 TaskFlow is a professional-grade project management application designed for organized task tracking, team collaboration, and workflow visualization. This system provides a comprehensive set of tools including multiple viewing modes, real-time notifications, and advanced analytics.
 

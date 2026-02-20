@@ -40,7 +40,7 @@ export default function LoginPage() {
             </button>
             <div className="auth-card">
                 <h1>Welcome Back</h1>
-                <p className="subtitle">Sign in to your TaskFlow account</p>
+                <p className="subtitle">Sign in to your UpClick account</p>
 
                 {error && <div className="error-msg">{error}</div>}
 

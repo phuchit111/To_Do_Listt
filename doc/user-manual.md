@@ -1,8 +1,8 @@
-# TaskFlow User Manual / คู่มือการใช้งานระบบ TaskFlow
+# UpClick User Manual / คู่มือการใช้งานระบบ UpClick
 
-This manual provides detailed instructions for navigating and utilizing the TaskFlow Project Management System. Follow these guidelines to optimize your workflow and collaboration.
+This manual provides detailed instructions for navigating and utilizing the UpClick Project Management System. Follow these guidelines to optimize your workflow and collaboration.
 
-คู่มือนี้จัดทำขึ้นเพื่ออธิบายขั้นตอนการใช้งานระบบจัดการโครงการ TaskFlow โดยละเอียด โปรดปฏิบัติตามคำแนะนำเหล่านี้เพื่อเพิ่มประสิทธิภาพในการทำงานและการทำงานร่วมกันภายในทีม
+คู่มือนี้จัดทำขึ้นเพื่ออธิบายขั้นตอนการใช้งานระบบจัดการโครงการ UpClick โดยละเอียด โปรดปฏิบัติตามคำแนะนำเหล่านี้เพื่อเพิ่มประสิทธิภาพในการทำงานและการทำงานร่วมกันภายในทีม
 
 ---
 
