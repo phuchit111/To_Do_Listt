@@ -1,113 +1,133 @@
-# 🚀 TaskFlow — Smart Project Management App
+# TaskFlow Project Management System
 
-A premium, ClickUp-inspired project management application built with the MERN-like stack. Manage tasks, projects, and teams with advanced views and automation.
+TaskFlow is a professional-grade project management application designed for organized task tracking, team collaboration, and workflow visualization. This system provides a comprehensive set of tools including multiple viewing modes, real-time notifications, and advanced analytics.
 
-## 🏗️ Tech Stack
+## Technical Architecture
 
-| Layer | Technology |
-|-------|-----------|
-| **Frontend** | Next.js 14, React 18, Vanilla CSS |
-| **Backend** | Node.js + Express |
-| **Database** | PostgreSQL |
-| **ORM** | Prisma |
-| **Auth** | JWT (JSON Web Tokens) |
-| **Storage** | Local Filesystem via Multer |
-| **Automation** | Node-Cron |
-| **Containerization** | Docker + Docker Compose |
+The application is built using a modern full-stack architecture designed for scalability and maintainability.
 
-## ✨ Features
+### Frontend
+- Framework: Next.js 14 (App Router)
+- Language: JavaScript (ES6+)
+- Styling: Vanilla CSS focusing on high-performance rendering and custom theme support
+- State Management: React Context API (Auth and Theme)
+- Icons: Lucide React for consistent UI elements
 
-### 1. Multiple Views
-- 📋 **List View** — Detailed task list with priorities, subtasks, and categories.
-- 📌 **Kanban Board** — Drag & drop tasks between statuses (Pending → In Progress → Completed).
-- 📅 **Calendar View** — Monthly overview of task deadlines.
+### Backend
+- Framework: Node.js with Express
+- Database: PostgreSQL
+- ORM: Prisma
+- Authentication: JWT (JSON Web Tokens) with Bcrypt for secure credential hashing
+- File Management: Multer for handling multipart/form-data (task attachments)
+- Task Scheduling: Node-Cron for automated deadline alerts
 
-### 2. Task Excellence
-- 🔴 **Priority System** — Urgent, High, Normal, Low with visual indicators.
-- 🔗 **Subtasks** — Break down complex tasks into manageable steps.
-- 📂 **Project Grouping** — Organize tasks into branded projects with custom colors.
-- 📎 **File Attachments** — Upload and manage files directly within tasks (up to 10MB).
+### Infrastructure
+- Containerization: Docker and Docker Compose
+- Persistent Storage: Local volume mounting for database and file uploads
 
-### 3. Collaboration & History
-- 💬 **Comments** — Real-time discussions on every task.
-- 🏷️ **User Tagging** — Assign multiple team members to a task.
-- 📜 **Activity Logs** — Full audit trail of status changes, renames, and comments.
+---
 
-### 4. Smart Notifications
-- 🔔 **Notification Center** — Real-time (polling) updates for tags, comments, and reminders.
-- ⏰ **Deadline Reminders** — Automated cron job alerts 24 hours before a due date.
+## Core Features
+
+### 1. View Management
+- Dashboard: Centralized analytics hub featuring a solid pie chart visualization of project status (Overdue, Backlog, In Progress, Completed).
+- List View: High-density task list with advanced sorting and multi-parameter filtering capabilities.
+- Kanban Board: Interactive interface for workflow management using drag-and-drop functionality for status updates.
+- Calendar View: Temporal overview of project milestones and task deadlines in a monthly format.
+
+### 2. Task Infrastructure
+- Priority Levels: Granular priority system (Urgent, High, Normal, Low) with distinct visual signaling.
+- Subtask System: Support for hierarchical task breakdown for complex objectives.
+- Project Grouping: Logical isolation of tasks into specific projects with customizable color-coded branding.
+- Attachment Management: Direct integration for uploading documents and images to individual task records.
+
+### 3. Collaboration and Accountability
+- Comment Threads: Real-time discussion capability integrated within each task.
+- Multi-User Tagging: Ability to assign and notify multiple team members on a single task.
+- Activity Logs: Immutable history of status changes, renames, and collaborative actions for audit purposes.
+
+### 4. System Automation
+- Notification Center: Polling-based real-time notification system for user mentions and deadline alerts.
+- Deadline Monitoring: Automated background processes that scan for tasks due within 24 hours.
 
 ### 5. Personalization
-- ⚙️ **User Settings** — Update display name, change password, and view personal stats.
-- 🎨 **Premium UI** — Modern dark theme with glassmorphism and smooth animations.
+- Theme Engine: Fully integrated Light and Dark mode support with persistence via browser local storage.
+- User Profile: Comprehensive settings for identity management and credential updates.
 
 ---
 
-## 🚀 Quick Start
+## Installation and Setup
 
-### 1. Using Docker (Recommended)
+### Prerequisites
+- Docker and Docker Compose installed (Recommended)
+- Node.js 18.x or higher and PostgreSQL (For manual setup)
 
-```bash
-docker-compose up --build
-```
+### Deployment via Docker
 
-- **Frontend**: [http://localhost:3000](http://localhost:3000)
-- **Backend API**: [http://localhost:5000](http://localhost:5000)
-- **Uploaded Files**: `./backend/uploads/`
+1. Clone the repository to your local machine.
+2. Ensure no other services are using ports 3000 (Frontend), 5000 (Backend), or 5432 (Database).
+3. Execute the following command in the project root:
+   ```bash
+   docker-compose up --build -d
+   ```
+4. The system will be accessible at:
+   - Frontend: http://localhost:3000
+   - Backend API: http://localhost:5000
 
-### 2. Manual Setup
+### Manual Deployment
 
-**Prerequisites**: Node.js 18+, PostgreSQL
+#### Backend Configuration
+1. Navigate to the backend directory:
+   ```bash
+   cd backend
+   ```
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+3. Create a .env file and configure the following variables:
+   - DATABASE_URL: Your PostgreSQL connection string
+   - JWT_SECRET: A secure string for token signing
+4. Initialize the database:
+   ```bash
+   npx prisma generate
+   npx prisma migrate dev --name init
+   ```
+5. Start the development server:
+   ```bash
+   npm run dev
+   ```
 
-#### Backend
-```bash
-cd backend
-npm install
-# Configure .env: DATABASE_URL, JWT_SECRET
-npx prisma migrate dev
-npm run dev
-```
-
-#### Frontend
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
----
-
-## 📁 Project Structure
-
-```
-To_Do_Listt/
-├── backend/
-│   ├── prisma/schema.prisma    # DB Models: User, Project, Task, Attachment...
-│   ├── src/
-│   │   ├── cron/reminders.js   # Automated deadline checks
-│   │   ├── routes/             # API: Auth, Tasks, Projects, Uploads, Profile...
-│   │   └── index.js            # Entry point
-│   └── uploads/                # Attached files storage
-├── frontend/
-│   ├── src/
-│   │   ├── app/                # Pages: Dashboard, Board, Calendar, Settings...
-│   │   ├── components/         # Sidebar, TaskDetailPanel, Notifications...
-│   │   ├── context/AuthContext # User state management
-│   │   └── lib/api.js          # API Client (Fetch wrapper)
-└── README.md
-```
-
-## 🔌 Core API Endpoints
-
-| Area | Endpoints |
-|------|-----------|
-| **Auth** | `POST /api/auth/login`, `POST /api/auth/register` |
-| **Tasks** | `GET /api/tasks`, `POST /api/tasks`, `PUT /api/tasks/:id`, `DELETE /api/tasks/:id` |
-| **Projects** | `GET /api/projects`, `POST /api/projects`, `PUT /api/projects/:id` |
-| **Files** | `POST /api/tasks/:taskId/attachments`, `GET /api/tasks/:taskId/attachments` |
-| **Profile** | `GET /api/profile`, `PUT /api/profile`, `PUT /api/profile/password` |
-| **Data** | `/api/dashboard`, `/api/notifications`, `/api/categories`, `/api/users` |
+#### Frontend Configuration
+1. Navigate to the frontend directory:
+   ```bash
+   cd frontend
+   ```
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+3. Start the development server:
+   ```bash
+   npm run dev
+   ```
 
 ---
 
-Developed with ❤️ as a premium ClickUp-like solution.
+
+## API Reference
+
+The system exposes a RESTful API for integration or external monitoring:
+
+| Category | Endpoint | Method |
+|----------|----------|--------|
+| Authentication | /api/auth/register | POST |
+| Authentication | /api/auth/login | POST |
+| Task Management | /api/tasks | GET, POST, PUT, DELETE |
+| Project Management | /api/projects | GET, POST, PUT |
+| Dashboard Data | /api/dashboard | GET |
+| Profile Management | /api/profile | GET, PUT |
+
+---
+
+This Project Management System is intended for professional use cases requiring robust task tracking and team coordination.

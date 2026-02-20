@@ -9,6 +9,7 @@ const prisma = new PrismaClient();
 // POST /api/auth/register
 router.post('/register', async (req, res) => {
     try {
+        const { name, email, password } = req.body;
         const hashed = await bcrypt.hash(password, 10);
         const user = await prisma.user.create({
             data: {

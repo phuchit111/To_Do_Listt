@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '../../context/AuthContext';
 import { taskAPI, categoryAPI, userAPI } from '../../lib/api';
@@ -9,7 +9,7 @@ import TaskDetailPanel from '../../components/TaskDetailPanel';
 import {
     Plus, Search, CheckCircle2, MessageSquare, AlertCircle,
     Clock, Check, Tag, Calendar as CalendarIcon, MoreVertical,
-    Circle
+    Circle, CheckSquare
 } from 'lucide-react';
 
 const STATUS_OPTIONS = [
@@ -25,7 +25,7 @@ const PRIORITY_OPTIONS = [
     { value: 'LOW', label: 'Low', color: '#94a3b8' },
 ];
 
-export default function TasksPage() {
+function TasksContent() {
     const { user, loading: authLoading } = useAuth();
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -280,13 +280,11 @@ export default function TasksPage() {
                         <option value="">All Categories</option>
                         {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                     </select>
-                    {user.role !== 'ADMIN' && (
-                        <select className="filter-select" value={filterTagged} onChange={(e) => setFilterTagged(e.target.value)} id="filter-tagged">
-                            <option value="">All Tasks</option>
-                            <option value="mine">My Tasks</option>
-                            <option value="true">Tagged to me</option>
-                        </select>
-                    )}
+                    <select className="filter-select" value={filterTagged} onChange={(e) => setFilterTagged(e.target.value)} id="filter-tagged">
+                        <option value="">All Tasks</option>
+                        <option value="mine">My Tasks</option>
+                        <option value="true">Tagged to me</option>
+                    </select>
                 </div>
 
                 {/* Task list */}
@@ -591,5 +589,13 @@ export default function TasksPage() {
                 )
             }
         </div >
+    );
+}
+
+export default function TasksPage() {
+    return (
+        <Suspense fallback={<div className="loading"><div className="spinner"></div></div>}>
+            <TasksContent />
+        </Suspense>
     );
 }
