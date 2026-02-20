@@ -37,8 +37,14 @@ export function AuthProvider({ children }) {
         router.push('/login');
     };
 
+    const updateUser = (newData) => {
+        const updated = { ...user, ...newData };
+        localStorage.setItem('user', JSON.stringify(updated));
+        setUser(updated);
+    };
+
     return (
-        <AuthContext.Provider value={{ user, token, loading, login, logout }}>
+        <AuthContext.Provider value={{ user, token, loading, login, logout, updateUser }}>
             {children}
         </AuthContext.Provider>
     );
@@ -49,3 +55,4 @@ export function useAuth() {
     if (!ctx) throw new Error('useAuth must be inside AuthProvider');
     return ctx;
 }
+

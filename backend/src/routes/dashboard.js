@@ -8,7 +8,15 @@ const prisma = new PrismaClient();
 // GET /api/dashboard — stats & analytics
 router.get('/', authMiddleware, async (req, res) => {
     try {
-        const where = req.user.role === 'ADMIN' ? {} : { userId: req.user.id };
+        // ADMIN sees all, USER sees own + tagged tasks
+        const where = req.user.role === 'ADMIN'
+            ? {}
+            : {
+                OR: [
+                    { userId: req.user.id },
+                    { tags: { some: { userId: req.user.id } } },
+                ],
+            };
 
         // Total tasks
         const total = await prisma.task.count({ where });

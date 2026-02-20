@@ -1,99 +1,113 @@
-# ✅ TaskFlow — To-Do List Application
+# 🚀 TaskFlow — Smart Project Management App
 
-A full-stack task management application with JWT authentication, role-based access, dashboard analytics, and Docker support.
+A premium, ClickUp-inspired project management application built with the MERN-like stack. Manage tasks, projects, and teams with advanced views and automation.
 
 ## 🏗️ Tech Stack
 
 | Layer | Technology |
 |-------|-----------|
-| **Frontend** | Next.js 14 (React 18) |
+| **Frontend** | Next.js 14, React 18, Vanilla CSS |
 | **Backend** | Node.js + Express |
 | **Database** | PostgreSQL |
 | **ORM** | Prisma |
 | **Auth** | JWT (JSON Web Tokens) |
+| **Storage** | Local Filesystem via Multer |
+| **Automation** | Node-Cron |
 | **Containerization** | Docker + Docker Compose |
 
 ## ✨ Features
 
-- 🔐 **Login / Register** with JWT authentication
-- 👤 **Roles** — Admin (sees all tasks) / User (own tasks only)
-- 📊 **Dashboard** — Completion %, status breakdown, category charts, upcoming deadlines
-- 🏷️ **Categories** — Color-coded task organization
-- 📋 **Task Management** — Full CRUD with status toggle (Pending → In Progress → Completed)
-- 👥 **User Tagging** — Assign related users to tasks
-- 🔍 **Search & Filter** — By text, status, category
-- 📅 **Due Dates** — Date/time scheduling with overdue alerts
-- 📱 **Responsive UI** — Premium dark theme, works on all devices
-- 🐳 **Docker** — One-command deployment
+### 1. Multiple Views
+- 📋 **List View** — Detailed task list with priorities, subtasks, and categories.
+- 📌 **Kanban Board** — Drag & drop tasks between statuses (Pending → In Progress → Completed).
+- 📅 **Calendar View** — Monthly overview of task deadlines.
+
+### 2. Task Excellence
+- 🔴 **Priority System** — Urgent, High, Normal, Low with visual indicators.
+- 🔗 **Subtasks** — Break down complex tasks into manageable steps.
+- 📂 **Project Grouping** — Organize tasks into branded projects with custom colors.
+- 📎 **File Attachments** — Upload and manage files directly within tasks (up to 10MB).
+
+### 3. Collaboration & History
+- 💬 **Comments** — Real-time discussions on every task.
+- 🏷️ **User Tagging** — Assign multiple team members to a task.
+- 📜 **Activity Logs** — Full audit trail of status changes, renames, and comments.
+
+### 4. Smart Notifications
+- 🔔 **Notification Center** — Real-time (polling) updates for tags, comments, and reminders.
+- ⏰ **Deadline Reminders** — Automated cron job alerts 24 hours before a due date.
+
+### 5. Personalization
+- ⚙️ **User Settings** — Update display name, change password, and view personal stats.
+- 🎨 **Premium UI** — Modern dark theme with glassmorphism and smooth animations.
+
+---
 
 ## 🚀 Quick Start
 
-### Option 1: Docker (Recommended)
+### 1. Using Docker (Recommended)
 
 ```bash
 docker-compose up --build
 ```
 
-- Frontend: http://localhost:3000
-- Backend API: http://localhost:5000
-- PostgreSQL: localhost:5432
+- **Frontend**: [http://localhost:3000](http://localhost:3000)
+- **Backend API**: [http://localhost:5000](http://localhost:5000)
+- **Uploaded Files**: `./backend/uploads/`
 
-### Option 2: Manual Setup
+### 2. Manual Setup
 
 **Prerequisites**: Node.js 18+, PostgreSQL
 
-#### 1. Database
-Create a PostgreSQL database named `tododb`.
-
-#### 2. Backend
+#### Backend
 ```bash
 cd backend
-cp .env .env.local  # Update DATABASE_URL if needed
 npm install
-npx prisma migrate dev --name init
+# Configure .env: DATABASE_URL, JWT_SECRET
+npx prisma migrate dev
 npm run dev
 ```
 
-#### 3. Frontend
+#### Frontend
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
 
+---
+
 ## 📁 Project Structure
 
 ```
 To_Do_Listt/
-├── docker-compose.yml
 ├── backend/
-│   ├── prisma/schema.prisma    # Database schema
+│   ├── prisma/schema.prisma    # DB Models: User, Project, Task, Attachment...
 │   ├── src/
-│   │   ├── index.js            # Express server
-│   │   ├── middleware/auth.js   # JWT & role guards
-│   │   └── routes/             # API endpoints
-│   └── Dockerfile
+│   │   ├── cron/reminders.js   # Automated deadline checks
+│   │   ├── routes/             # API: Auth, Tasks, Projects, Uploads, Profile...
+│   │   └── index.js            # Entry point
+│   └── uploads/                # Attached files storage
 ├── frontend/
 │   ├── src/
-│   │   ├── app/                # Next.js pages
-│   │   ├── components/         # React components
-│   │   ├── context/            # Auth context
-│   │   ├── lib/api.js          # API client
-│   │   └── styles/globals.css  # Design system
-│   └── Dockerfile
+│   │   ├── app/                # Pages: Dashboard, Board, Calendar, Settings...
+│   │   ├── components/         # Sidebar, TaskDetailPanel, Notifications...
+│   │   ├── context/AuthContext # User state management
+│   │   └── lib/api.js          # API Client (Fetch wrapper)
 └── README.md
 ```
 
-## 🔌 API Endpoints
+## 🔌 Core API Endpoints
 
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| POST | `/api/auth/register` | — | Register |
-| POST | `/api/auth/login` | — | Login |
-| GET | `/api/tasks` | JWT | List tasks (search/filter) |
-| POST | `/api/tasks` | JWT | Create task |
-| PUT | `/api/tasks/:id` | JWT | Update task |
-| DELETE | `/api/tasks/:id` | JWT | Delete task |
-| GET/POST/DELETE | `/api/categories` | JWT | Manage categories |
-| GET | `/api/users` | JWT | List users |
-| GET | `/api/dashboard` | JWT | Analytics |
+| Area | Endpoints |
+|------|-----------|
+| **Auth** | `POST /api/auth/login`, `POST /api/auth/register` |
+| **Tasks** | `GET /api/tasks`, `POST /api/tasks`, `PUT /api/tasks/:id`, `DELETE /api/tasks/:id` |
+| **Projects** | `GET /api/projects`, `POST /api/projects`, `PUT /api/projects/:id` |
+| **Files** | `POST /api/tasks/:taskId/attachments`, `GET /api/tasks/:taskId/attachments` |
+| **Profile** | `GET /api/profile`, `PUT /api/profile`, `PUT /api/profile/password` |
+| **Data** | `/api/dashboard`, `/api/notifications`, `/api/categories`, `/api/users` |
+
+---
+
+Developed with ❤️ as a premium ClickUp-like solution.

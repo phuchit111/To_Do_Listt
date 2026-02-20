@@ -1,10 +1,16 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '../../context/AuthContext';
 import { taskAPI, categoryAPI, userAPI } from '../../lib/api';
 import Sidebar from '../../components/Sidebar';
+import TaskDetailPanel from '../../components/TaskDetailPanel';
+import {
+    Plus, Search, CheckCircle2, MessageSquare, AlertCircle,
+    Clock, Check, Tag, Calendar as CalendarIcon, MoreVertical,
+    Circle
+} from 'lucide-react';
 
 const STATUS_OPTIONS = [
     { value: 'PENDING', label: 'Pending', cls: 'badge-pending' },
@@ -12,9 +18,18 @@ const STATUS_OPTIONS = [
     { value: 'COMPLETED', label: 'Completed', cls: 'badge-completed' },
 ];
 
+const PRIORITY_OPTIONS = [
+    { value: 'URGENT', label: 'Urgent', color: '#ef4444' },
+    { value: 'HIGH', label: 'High', color: '#f97316' },
+    { value: 'NORMAL', label: 'Normal', color: '#6366f1' },
+    { value: 'LOW', label: 'Low', color: '#94a3b8' },
+];
+
 export default function TasksPage() {
     const { user, loading: authLoading } = useAuth();
     const router = useRouter();
+    const searchParams = useSearchParams();
+    const projectId = searchParams.get('project') || '';
 
     const [tasks, setTasks] = useState([]);
     const [categories, setCategories] = useState([]);
@@ -25,12 +40,14 @@ export default function TasksPage() {
     const [search, setSearch] = useState('');
     const [filterStatus, setFilterStatus] = useState('');
     const [filterCategory, setFilterCategory] = useState('');
+    const [filterTagged, setFilterTagged] = useState('');
+    const [filterPriority, setFilterPriority] = useState('');
 
     // Modal
     const [showModal, setShowModal] = useState(false);
     const [editingTask, setEditingTask] = useState(null);
     const [form, setForm] = useState({
-        title: '', description: '', status: 'PENDING', dueDate: '', categoryId: '', taggedUserIds: [],
+        title: '', description: '', status: 'PENDING', priority: 'NORMAL', dueDate: '', categoryId: '', taggedUserIds: [],
     });
 
     // Category modal
@@ -44,6 +61,9 @@ export default function TasksPage() {
     // Tag dropdown
     const [showTagDropdown, setShowTagDropdown] = useState(false);
 
+    // Detail panel
+    const [detailTaskId, setDetailTaskId] = useState(null);
+
     useEffect(() => {
         if (!authLoading && !user) {
             router.replace('/login');
@@ -52,13 +72,13 @@ export default function TasksPage() {
         if (user) {
             loadAll();
         }
-    }, [user, authLoading]);
+    }, [user, authLoading, projectId]);
 
     const loadAll = async () => {
         setLoading(true);
         try {
             const [t, c, u] = await Promise.all([
-                taskAPI.list({ search, status: filterStatus, categoryId: filterCategory }),
+                taskAPI.list({ search, status: filterStatus, priority: filterPriority, categoryId: filterCategory, tagged: filterTagged, projectId }),
                 categoryAPI.list(),
                 userAPI.list(),
             ]);
@@ -80,11 +100,11 @@ export default function TasksPage() {
             }, 300);
             return () => clearTimeout(timeout);
         }
-    }, [search, filterStatus, filterCategory]);
+    }, [search, filterStatus, filterCategory, filterTagged, filterPriority]);
 
     const loadTasks = async () => {
         try {
-            const t = await taskAPI.list({ search, status: filterStatus, categoryId: filterCategory });
+            const t = await taskAPI.list({ search, status: filterStatus, priority: filterPriority, categoryId: filterCategory, tagged: filterTagged, projectId });
             setTasks(t);
         } catch (err) {
             console.error(err);
@@ -94,7 +114,7 @@ export default function TasksPage() {
     // Open modal
     const openAdd = () => {
         setEditingTask(null);
-        setForm({ title: '', description: '', status: 'PENDING', dueDate: '', categoryId: '', taggedUserIds: [] });
+        setForm({ title: '', description: '', status: 'PENDING', priority: 'NORMAL', dueDate: '', categoryId: '', taggedUserIds: [] });
         setShowModal(true);
     };
 
@@ -104,6 +124,7 @@ export default function TasksPage() {
             title: task.title,
             description: task.description || '',
             status: task.status,
+            priority: task.priority || 'NORMAL',
             dueDate: task.dueDate ? task.dueDate.slice(0, 16) : '',
             categoryId: task.categoryId || '',
             taggedUserIds: task.tags?.map(t => t.userId) || [],
@@ -124,8 +145,10 @@ export default function TasksPage() {
                 title: form.title,
                 description: form.description || null,
                 status: form.status,
+                priority: form.priority,
                 dueDate: form.dueDate || null,
                 categoryId: form.categoryId || null,
+                projectId: projectId || null,
                 taggedUserIds: form.taggedUserIds,
             };
 
@@ -142,7 +165,8 @@ export default function TasksPage() {
     };
 
     // Quick status toggle
-    const cycleStatus = async (task) => {
+    const cycleStatus = async (e, task) => {
+        e.stopPropagation();
         const order = ['PENDING', 'IN_PROGRESS', 'COMPLETED'];
         const next = order[(order.indexOf(task.status) + 1) % 3];
         try {
@@ -206,6 +230,8 @@ export default function TasksPage() {
     const formatDate = (d) =>
         new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 
+    const priorityInfo = (p) => PRIORITY_OPTIONS.find(o => o.value === p) || PRIORITY_OPTIONS[2];
+
     if (authLoading || !user) {
         return <div className="loading"><div className="spinner"></div></div>;
     }
@@ -220,262 +246,350 @@ export default function TasksPage() {
                         <p>{tasks.length} task{tasks.length !== 1 ? 's' : ''}</p>
                     </div>
                     <div style={{ display: 'flex', gap: '0.5rem' }}>
-                        <button className="btn btn-secondary btn-sm" onClick={() => setShowCategoryModal(true)}>
-                            🏷️ Categories
+                        <button className="btn btn-secondary btn-sm" onClick={() => setShowCategoryModal(true)} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                            <Tag size={14} /> Categories
                         </button>
-                        <button className="btn btn-primary btn-sm" onClick={openAdd} id="add-task-btn">
-                            ＋ Add Task
+                        <button className="btn btn-primary btn-sm" onClick={openAdd} id="add-task-btn" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                            <Plus size={16} /> Add Task
                         </button>
                     </div>
                 </div>
 
                 {/* Toolbar */}
                 <div className="tasks-toolbar">
-                    <input
-                        className="search-input"
-                        placeholder="Search tasks..."
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                        id="search-input"
-                    />
+                    <div style={{ position: 'relative', flex: 1 }}>
+                        <Search size={16} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                        <input
+                            className="search-input"
+                            placeholder="Search tasks..."
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                            id="search-input"
+                            style={{ paddingLeft: '2.5rem' }}
+                        />
+                    </div>
                     <select className="filter-select" value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} id="filter-status">
                         <option value="">All Status</option>
                         {STATUS_OPTIONS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+                    </select>
+                    <select className="filter-select" value={filterPriority} onChange={(e) => setFilterPriority(e.target.value)} id="filter-priority">
+                        <option value="">All Priority</option>
+                        {PRIORITY_OPTIONS.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
                     </select>
                     <select className="filter-select" value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)} id="filter-category">
                         <option value="">All Categories</option>
                         {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                     </select>
+                    {user.role !== 'ADMIN' && (
+                        <select className="filter-select" value={filterTagged} onChange={(e) => setFilterTagged(e.target.value)} id="filter-tagged">
+                            <option value="">All Tasks</option>
+                            <option value="mine">My Tasks</option>
+                            <option value="true">Tagged to me</option>
+                        </select>
+                    )}
                 </div>
 
                 {/* Task list */}
-                {loading ? (
-                    <div className="loading"><div className="spinner"></div></div>
-                ) : tasks.length === 0 ? (
-                    <div className="empty-state">
-                        <div className="emoji">📝</div>
-                        <h3>No tasks yet</h3>
-                        <p>Click "Add Task" to create your first task</p>
-                    </div>
-                ) : (
-                    <div className="tasks-list">
-                        {tasks.map((task) => (
-                            <div className="task-card" key={task.id}>
-                                <div className="task-card-header">
-                                    <h3 className={task.status === 'COMPLETED' ? 'completed-task' : ''}>
-                                        {task.title}
-                                    </h3>
-                                    <div className="task-card-actions">
-                                        <button className="btn-icon" title="Toggle status" onClick={() => cycleStatus(task)}>
-                                            {task.status === 'COMPLETED' ? '↩️' : task.status === 'IN_PROGRESS' ? '✅' : '▶️'}
-                                        </button>
-                                        <button className="btn-icon" title="Edit" onClick={() => openEdit(task)}>✏️</button>
-                                        <button className="btn-icon" title="Delete" onClick={() => setDeleteId(task.id)}>🗑️</button>
-                                    </div>
-                                </div>
-
-                                {task.description && (
-                                    <div className="task-card-body">
-                                        <p>{task.description}</p>
-                                    </div>
-                                )}
-
-                                <div className="task-card-meta">
-                                    <span className={`badge ${STATUS_OPTIONS.find(s => s.value === task.status)?.cls}`}>
-                                        {STATUS_OPTIONS.find(s => s.value === task.status)?.label}
-                                    </span>
-
-                                    {task.category && (
-                                        <span className="badge badge-category" style={{ borderColor: task.category.color, color: task.category.color }}>
-                                            {task.category.name}
-                                        </span>
-                                    )}
-
-                                    {isOverdue(task) && <span className="badge badge-overdue">Overdue</span>}
-
-                                    {task.dueDate && (
-                                        <span className={`task-due ${isOverdue(task) ? 'overdue' : ''}`}>
-                                            📅 {formatDate(task.dueDate)}
-                                        </span>
-                                    )}
-
-                                    {task.tags?.map(tag => (
-                                        <span className="badge badge-user" key={tag.id}>@{tag.user.name}</span>
-                                    ))}
-
-                                    {user.role === 'ADMIN' && task.user && (
-                                        <span className="task-owner">by {task.user.name}</span>
-                                    )}
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                )}
-            </main>
-
-            {/* === ADD/EDIT TASK MODAL === */}
-            {showModal && (
-                <div className="modal-overlay" onClick={closeModal}>
-                    <div className="modal" onClick={e => e.stopPropagation()}>
-                        <h2>{editingTask ? 'Edit Task' : 'New Task'}</h2>
-                        <form onSubmit={handleSave}>
-                            <div className="form-group">
-                                <label>Title</label>
-                                <input
-                                    id="task-title"
-                                    type="text"
-                                    value={form.title}
-                                    onChange={e => setForm(p => ({ ...p, title: e.target.value }))}
-                                    placeholder="What needs to be done?"
-                                    required
-                                />
-                            </div>
-                            <div className="form-group">
-                                <label>Description</label>
-                                <textarea
-                                    id="task-description"
-                                    rows={3}
-                                    value={form.description}
-                                    onChange={e => setForm(p => ({ ...p, description: e.target.value }))}
-                                    placeholder="Add details..."
-                                />
-                            </div>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-                                <div className="form-group">
-                                    <label>Status</label>
-                                    <select
-                                        id="task-status"
-                                        value={form.status}
-                                        onChange={e => setForm(p => ({ ...p, status: e.target.value }))}
-                                    >
-                                        {STATUS_OPTIONS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
-                                    </select>
-                                </div>
-                                <div className="form-group">
-                                    <label>Category</label>
-                                    <select
-                                        id="task-category"
-                                        value={form.categoryId}
-                                        onChange={e => setForm(p => ({ ...p, categoryId: e.target.value }))}
-                                    >
-                                        <option value="">None</option>
-                                        {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                                    </select>
-                                </div>
-                            </div>
-                            <div className="form-group">
-                                <label>Due Date & Time</label>
-                                <input
-                                    id="task-due"
-                                    type="datetime-local"
-                                    value={form.dueDate}
-                                    onChange={e => setForm(p => ({ ...p, dueDate: e.target.value }))}
-                                />
-                            </div>
-                            <div className="form-group">
-                                <label>Tag Users</label>
-                                <div className="multi-select" onClick={() => setShowTagDropdown(!showTagDropdown)}>
-                                    {form.taggedUserIds.length === 0 && (
-                                        <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem', padding: '0.1rem' }}>Click to tag users...</span>
-                                    )}
-                                    {form.taggedUserIds.map(uid => {
-                                        const u = users.find(u => u.id === uid);
-                                        return u ? (
-                                            <span className="multi-select-tag" key={uid}>
-                                                {u.name}
-                                                <button type="button" onClick={(e) => { e.stopPropagation(); toggleTag(uid); }}>×</button>
-                                            </span>
-                                        ) : null;
-                                    })}
-                                </div>
-                                {showTagDropdown && (
-                                    <div className="user-dropdown">
-                                        {users.filter(u => u.id !== user.id).map(u => (
+                {
+                    loading ? (
+                        <div className="loading"><div className="spinner"></div></div>
+                    ) : tasks.length === 0 ? (
+                        <div className="empty-state">
+                            <div className="emoji">—</div>
+                            <h3>No tasks yet</h3>
+                            <p>Click "Add Task" to create your first task</p>
+                        </div>
+                    ) : (
+                        <div className="tasks-list">
+                            {tasks.map((task) => (
+                                <div
+                                    className="task-card clickable"
+                                    key={task.id}
+                                    onClick={() => setDetailTaskId(task.id)}
+                                >
+                                    <div className="task-card-header">
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1 }}>
                                             <div
-                                                className="user-dropdown-item"
-                                                key={u.id}
-                                                onClick={() => toggleTag(u.id)}
                                                 style={{
-                                                    background: form.taggedUserIds.includes(u.id) ? 'var(--accent-glow)' : 'transparent',
+                                                    width: '10px',
+                                                    height: '10px',
+                                                    borderRadius: '50%',
+                                                    background: PRIORITY_OPTIONS.find(p => p.value === task.priority)?.color || '#6366f1'
                                                 }}
-                                            >
-                                                {form.taggedUserIds.includes(u.id) ? '✓ ' : ''}{u.name} ({u.email})
-                                            </div>
+                                                title={task.priority}
+                                            />
+                                            <h3 className={task.status === 'COMPLETED' ? 'completed-task' : ''}>
+                                                {task.title}
+                                            </h3>
+                                        </div>
+                                        <div className="task-card-actions">
+                                            <button className="btn-icon" title="Toggle status" onClick={(e) => cycleStatus(e, task)}>
+                                                {task.status === 'COMPLETED' ? 'Undo' : task.status === 'IN_PROGRESS' ? 'Done' : 'Start'}
+                                            </button>
+                                            <button className="btn-icon" title="Edit" onClick={(e) => { e.stopPropagation(); openEdit(task); }}>Edit</button>
+                                            <button className="btn-icon" title="Delete" onClick={(e) => { e.stopPropagation(); setDeleteId(task.id); }}>Del</button>
+                                        </div>
+                                    </div>
+
+                                    {task.description && (
+                                        <div className="task-card-body">
+                                            <p>{task.description}</p>
+                                        </div>
+                                    )}
+
+                                    <div className="task-card-meta">
+                                        <span className={`badge ${STATUS_OPTIONS.find(s => s.value === task.status)?.cls}`}>
+                                            {STATUS_OPTIONS.find(s => s.value === task.status)?.label}
+                                        </span>
+
+                                        <span className={`badge badge-priority-${task.priority?.toLowerCase() || 'normal'}`} style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                                            {task.priority === 'URGENT' ? <AlertCircle size={12} /> : <Circle size={10} fill="currentColor" />}
+                                            {task.priority || 'NORMAL'}
+                                        </span>
+
+                                        {task.category && (
+                                            <span className="badge badge-category" style={{ borderColor: task.category.color, color: task.category.color }}>
+                                                {task.category.name}
+                                            </span>
+                                        )}
+
+                                        {isOverdue(task) && <span className="badge badge-overdue" style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}><Clock size={12} /> Overdue</span>}
+
+                                        {task.userId !== user.id && (
+                                            <span className="badge badge-tagged">Tagged</span>
+                                        )}
+
+                                        {task.dueDate && (
+                                            <span className={`task-due ${isOverdue(task) ? 'overdue' : ''}`} style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                                                <CalendarIcon size={12} /> {formatDate(task.dueDate)}
+                                            </span>
+                                        )}
+
+                                        {task.tags?.map(tag => (
+                                            <span className="badge badge-user" key={tag.id}>@{tag.user.name}</span>
                                         ))}
-                                        {users.filter(u => u.id !== user.id).length === 0 && (
-                                            <div className="user-dropdown-item" style={{ color: 'var(--text-muted)' }}>No other users</div>
+
+                                        {task.subtasks?.length > 0 && (
+                                            <span className="badge badge-subtask" style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                                                <CheckSquare size={12} /> {task.subtasks.filter(s => s.status === 'COMPLETED').length}/{task.subtasks.length}
+                                            </span>
+                                        )}
+
+                                        {task._count?.comments > 0 && (
+                                            <span className="badge badge-comment" style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                                                <MessageSquare size={12} /> {task._count.comments}
+                                            </span>
+                                        )}
+
+                                        {user.role === 'ADMIN' && task.user && (
+                                            <span className="task-owner">by {task.user.name}</span>
                                         )}
                                     </div>
+                                </div>
+                            ))}
+                        </div>
+                    )
+                }
+            </main >
+
+            {/* === TASK DETAIL PANEL === */}
+            {
+                detailTaskId && (
+                    <TaskDetailPanel
+                        taskId={detailTaskId}
+                        onClose={() => setDetailTaskId(null)}
+                        onUpdate={loadTasks}
+                    />
+                )
+            }
+
+            {/* === ADD/EDIT TASK MODAL === */}
+            {
+                showModal && (
+                    <div className="modal-overlay" onClick={closeModal}>
+                        <div className="modal" onClick={e => e.stopPropagation()}>
+                            <h2>{editingTask ? 'Edit Task' : 'New Task'}</h2>
+                            <form onSubmit={handleSave}>
+                                <div className="form-group">
+                                    <label>Title</label>
+                                    <input
+                                        id="task-title"
+                                        type="text"
+                                        value={form.title}
+                                        onChange={e => setForm(p => ({ ...p, title: e.target.value }))}
+                                        placeholder="What needs to be done?"
+                                        required
+                                    />
+                                </div>
+                                <div className="form-group">
+                                    <label>Description</label>
+                                    <textarea
+                                        id="task-description"
+                                        rows={3}
+                                        value={form.description}
+                                        onChange={e => setForm(p => ({ ...p, description: e.target.value }))}
+                                        placeholder="Add details..."
+                                    />
+                                </div>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                                    <div className="form-group">
+                                        <label>Status</label>
+                                        {editingTask ? (
+                                            <select
+                                                id="task-status"
+                                                value={form.status}
+                                                onChange={e => setForm(p => ({ ...p, status: e.target.value }))}
+                                            >
+                                                {STATUS_OPTIONS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+                                            </select>
+                                        ) : (
+                                            <div style={{ padding: '0.5rem 0.75rem', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '8px', color: 'var(--warning)', fontSize: '0.9rem', display: 'flex', alignItems: 'center' }}>
+                                                <span className="badge badge-pending" style={{ padding: '0.2rem 0.6rem' }}>Pending</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div className="form-group">
+                                        <label>Priority</label>
+                                        <select
+                                            id="task-priority"
+                                            value={form.priority}
+                                            onChange={e => setForm(p => ({ ...p, priority: e.target.value }))}
+                                        >
+                                            {PRIORITY_OPTIONS.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
+                                        </select>
+                                    </div>
+                                </div>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                                    <div className="form-group">
+                                        <label>Category</label>
+                                        <select
+                                            id="task-category"
+                                            value={form.categoryId}
+                                            onChange={e => setForm(p => ({ ...p, categoryId: e.target.value }))}
+                                        >
+                                            <option value="">None</option>
+                                            {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                        </select>
+                                    </div>
+                                    <div className="form-group">
+                                        <label>Due Date & Time</label>
+                                        <input
+                                            id="task-due"
+                                            type="datetime-local"
+                                            value={form.dueDate}
+                                            onChange={e => setForm(p => ({ ...p, dueDate: e.target.value }))}
+                                        />
+                                    </div>
+                                </div>
+                                <div className="form-group">
+                                    <label>Tag Users</label>
+                                    <div className="multi-select" onClick={() => setShowTagDropdown(!showTagDropdown)}>
+                                        {form.taggedUserIds.length === 0 && (
+                                            <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem', padding: '0.1rem' }}>Click to tag users...</span>
+                                        )}
+                                        {form.taggedUserIds.map(uid => {
+                                            const u = users.find(u => u.id === uid);
+                                            return u ? (
+                                                <span className="multi-select-tag" key={uid}>
+                                                    {u.name}
+                                                    <button type="button" onClick={(e) => { e.stopPropagation(); toggleTag(uid); }}>×</button>
+                                                </span>
+                                            ) : null;
+                                        })}
+                                    </div>
+                                    {showTagDropdown && (
+                                        <div className="user-dropdown">
+                                            {users.filter(u => u.id !== user.id).map(u => (
+                                                <div
+                                                    className="user-dropdown-item"
+                                                    key={u.id}
+                                                    onClick={() => toggleTag(u.id)}
+                                                    style={{
+                                                        background: form.taggedUserIds.includes(u.id) ? 'var(--accent-glow)' : 'transparent',
+                                                    }}
+                                                >
+                                                    {form.taggedUserIds.includes(u.id) ? '✓ ' : ''}{u.name} ({u.email})
+                                                </div>
+                                            ))}
+                                            {users.filter(u => u.id !== user.id).length === 0 && (
+                                                <div className="user-dropdown-item" style={{ color: 'var(--text-muted)' }}>No other users</div>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="modal-actions">
+                                    <button type="button" className="btn btn-secondary" onClick={closeModal}>Cancel</button>
+                                    <button type="submit" className="btn btn-primary" style={{ width: 'auto' }} id="save-task-btn">
+                                        {editingTask ? 'Save Changes' : 'Create Task'}
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                )
+            }
+
+            {/* === CATEGORY MODAL === */}
+            {
+                showCategoryModal && (
+                    <div className="modal-overlay" onClick={() => setShowCategoryModal(false)}>
+                        <div className="modal" onClick={e => e.stopPropagation()}>
+                            <h2>Manage Categories</h2>
+                            <form onSubmit={handleAddCategory} style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
+                                <input
+                                    type="text"
+                                    placeholder="Category name"
+                                    value={newCategoryName}
+                                    onChange={e => setNewCategoryName(e.target.value)}
+                                    required
+                                    style={{ flex: 1, padding: '0.5rem 0.75rem', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '8px', color: 'var(--text-primary)', fontFamily: 'inherit' }}
+                                />
+                                <input
+                                    type="color"
+                                    value={newCategoryColor}
+                                    onChange={e => setNewCategoryColor(e.target.value)}
+                                    style={{ width: '40px', height: '40px', border: 'none', borderRadius: '8px', cursor: 'pointer', background: 'transparent' }}
+                                />
+                                <button type="submit" className="btn btn-primary btn-sm" style={{ width: 'auto' }}>Add</button>
+                            </form>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                                {categories.map(cat => (
+                                    <div key={cat.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.5rem 0.75rem', background: 'var(--bg-card)', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                            <span style={{ width: '12px', height: '12px', borderRadius: '50%', background: cat.color }}></span>
+                                            <span style={{ fontSize: '0.9rem' }}>{cat.name}</span>
+                                            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>({cat._count?.tasks || 0} tasks)</span>
+                                        </div>
+                                        <button className="btn-icon" onClick={() => handleDeleteCategory(cat.id)} title="Delete category" style={{ border: 'none' }}>Del</button>
+                                    </div>
+                                ))}
+                                {categories.length === 0 && (
+                                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', textAlign: 'center', padding: '1rem' }}>No categories yet</p>
                                 )}
                             </div>
                             <div className="modal-actions">
-                                <button type="button" className="btn btn-secondary" onClick={closeModal}>Cancel</button>
-                                <button type="submit" className="btn btn-primary" style={{ width: 'auto' }} id="save-task-btn">
-                                    {editingTask ? 'Save Changes' : 'Create Task'}
-                                </button>
+                                <button className="btn btn-secondary" onClick={() => setShowCategoryModal(false)}>Close</button>
                             </div>
-                        </form>
-                    </div>
-                </div>
-            )}
-
-            {/* === CATEGORY MODAL === */}
-            {showCategoryModal && (
-                <div className="modal-overlay" onClick={() => setShowCategoryModal(false)}>
-                    <div className="modal" onClick={e => e.stopPropagation()}>
-                        <h2>🏷️ Manage Categories</h2>
-                        <form onSubmit={handleAddCategory} style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
-                            <input
-                                type="text"
-                                placeholder="Category name"
-                                value={newCategoryName}
-                                onChange={e => setNewCategoryName(e.target.value)}
-                                required
-                                style={{ flex: 1, padding: '0.5rem 0.75rem', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '8px', color: 'var(--text-primary)', fontFamily: 'inherit' }}
-                            />
-                            <input
-                                type="color"
-                                value={newCategoryColor}
-                                onChange={e => setNewCategoryColor(e.target.value)}
-                                style={{ width: '40px', height: '40px', border: 'none', borderRadius: '8px', cursor: 'pointer', background: 'transparent' }}
-                            />
-                            <button type="submit" className="btn btn-primary btn-sm" style={{ width: 'auto' }}>Add</button>
-                        </form>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                            {categories.map(cat => (
-                                <div key={cat.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.5rem 0.75rem', background: 'var(--bg-card)', borderRadius: '8px', border: '1px solid var(--border)' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                        <span style={{ width: '12px', height: '12px', borderRadius: '50%', background: cat.color }}></span>
-                                        <span style={{ fontSize: '0.9rem' }}>{cat.name}</span>
-                                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>({cat._count?.tasks || 0} tasks)</span>
-                                    </div>
-                                    <button className="btn-icon" onClick={() => handleDeleteCategory(cat.id)} title="Delete category" style={{ border: 'none' }}>🗑️</button>
-                                </div>
-                            ))}
-                            {categories.length === 0 && (
-                                <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', textAlign: 'center', padding: '1rem' }}>No categories yet</p>
-                            )}
-                        </div>
-                        <div className="modal-actions">
-                            <button className="btn btn-secondary" onClick={() => setShowCategoryModal(false)}>Close</button>
                         </div>
                     </div>
-                </div>
-            )}
+                )
+            }
 
             {/* === DELETE CONFIRM === */}
-            {deleteId && (
-                <div className="confirm-overlay" onClick={() => setDeleteId(null)}>
-                    <div className="confirm-dialog" onClick={e => e.stopPropagation()}>
-                        <h3>Delete Task?</h3>
-                        <p>This action cannot be undone.</p>
-                        <div className="confirm-actions">
-                            <button className="btn btn-secondary btn-sm" onClick={() => setDeleteId(null)}>Cancel</button>
-                            <button className="btn btn-danger btn-sm" onClick={confirmDelete}>Delete</button>
+            {
+                deleteId && (
+                    <div className="confirm-overlay" onClick={() => setDeleteId(null)}>
+                        <div className="confirm-dialog" onClick={e => e.stopPropagation()}>
+                            <h3>Delete Task?</h3>
+                            <p>This action cannot be undone.</p>
+                            <div className="confirm-actions">
+                                <button className="btn btn-secondary btn-sm" onClick={() => setDeleteId(null)}>Cancel</button>
+                                <button className="btn btn-danger btn-sm" onClick={confirmDelete}>Delete</button>
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
-        </div>
+                )
+            }
+        </div >
     );
 }
