@@ -14,6 +14,11 @@ async function request(endpoint, options = {}) {
         headers,
     });
 
+    const contentType = res.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+        throw new Error('Server is unreachable. Please check backend connection.');
+    }
+
     const data = await res.json();
 
     if (!res.ok) {

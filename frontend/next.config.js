@@ -4,7 +4,7 @@ const nextConfig = {
         return [
             {
                 source: '/api/:path*',
-                destination: `${process.env.BACKEND_API_URL || 'http://localhost:5000'}/api/:path*`,
+                destination: `${process.env.BACKEND_API_URL || 'https://todolistt-production-a07c.up.railway.app'}/api/:path*`,
             },
         ];
     },
