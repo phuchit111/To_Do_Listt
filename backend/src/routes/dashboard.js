@@ -9,7 +9,7 @@ const prisma = new PrismaClient();
 router.get('/', authMiddleware, async (req, res) => {
     try {
         // All users see only their own + tagged tasks
-        const where = {
+        const userFilter = {
             OR: [
                 { userId: req.user.id },
                 { tags: { some: { userId: req.user.id } } },
@@ -20,13 +20,13 @@ router.get('/', authMiddleware, async (req, res) => {
 
         // 1. Completed
         const completed = await prisma.task.count({
-            where: { ...where, status: 'COMPLETED' }
+            where: { ...userFilter, status: 'COMPLETED' }
         });
 
         // 2. Overdue (Not completed and due date has passed)
         const overdue = await prisma.task.count({
             where: {
-                ...where,
+                ...userFilter,
                 status: { not: 'COMPLETED' },
                 dueDate: { lt: now },
             },
@@ -35,11 +35,15 @@ router.get('/', authMiddleware, async (req, res) => {
         // 3. In Progress (Active work, not overdue)
         const inProgress = await prisma.task.count({
             where: {
-                ...where,
-                status: 'IN_PROGRESS',
-                OR: [
-                    { dueDate: { gte: now } },
-                    { dueDate: null },
+                AND: [
+                    userFilter,
+                    {
+                        status: 'IN_PROGRESS',
+                        OR: [
+                            { dueDate: { gte: now } },
+                            { dueDate: null },
+                        ],
+                    },
                 ],
             },
         });
@@ -47,11 +51,15 @@ router.get('/', authMiddleware, async (req, res) => {
         // 4. Backlog (Everything else: Not completed, not in-progress, and not overdue)
         const pending = await prisma.task.count({
             where: {
-                ...where,
-                status: { notIn: ['COMPLETED', 'IN_PROGRESS'] },
-                OR: [
-                    { dueDate: { gte: now } },
-                    { dueDate: null },
+                AND: [
+                    userFilter,
+                    {
+                        status: { notIn: ['COMPLETED', 'IN_PROGRESS'] },
+                        OR: [
+                            { dueDate: { gte: now } },
+                            { dueDate: null },
+                        ],
+                    },
                 ],
             },
         });
@@ -64,7 +72,7 @@ router.get('/', authMiddleware, async (req, res) => {
         // Tasks per category
         const categoriesRaw = await prisma.task.groupBy({
             by: ['categoryId'],
-            where,
+            where: userFilter,
             _count: { id: true },
         });
 
@@ -88,7 +96,7 @@ router.get('/', authMiddleware, async (req, res) => {
         nextWeek.setDate(nextWeek.getDate() + 7);
         const upcoming = await prisma.task.findMany({
             where: {
-                ...where,
+                ...userFilter,
                 status: { not: 'COMPLETED' },
                 dueDate: { gte: now, lte: nextWeek },
             },
